@@ -5,8 +5,8 @@ import time
 GPIO.setmode(GPIO.BCM)
 
 # Motor control board GPIO pins
-FORWARD_PIN = 18  # GPIO pin for forward movement
-REVERSE_PIN = 19  # GPIO pin for reverse movement
+FORWARD_PIN = 5  # GPIO pin for forward movement
+REVERSE_PIN = 6  # GPIO pin for reverse movement
 
 # Set up motor control pins as outputs
 GPIO.setup(FORWARD_PIN, GPIO.OUT)
