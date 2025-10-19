@@ -1,13 +1,13 @@
 # 🎃 Halloween Barrel Project
 
-An automated Halloween barrel display that uses ultrasonic sensors to detect approaching trick-or-treaters and triggers a spooky sequence including barrel movement, smoke effects, water spray, lighting, and music.
+An automated Halloween barrel display that uses ultrasonic sensors to detect approaching trick-or-treaters and triggers a spooky sequence including skeleton movement, smoke effects, water spray, lighting, and music.
 
 ## 🌟 Features
 
 - **Dual Ultrasonic Sensors** - Reliable object detection with validation
-- **Automated Barrel Movement** - Forward/reverse motor control
+- **Automated Skeleton Movement** - Linear actuator controls skeleton leaning over barrel
 - **Smoke Effects** - Atmospheric fog machine control
-- **Water Spray** - Surprise pump activation
+- **Water Spray** - Skeleton "getting sick" effect through mouth
 - **Smart Lighting** - Govee light integration (optional)
 - **Halloween Music** - MP3 audio playback (optional)
 - **Comprehensive Logging** - Detailed operation tracking
@@ -33,9 +33,9 @@ An automated Halloween barrel display that uses ultrasonic sensors to detect app
 
 | Component | Pin Type | GPIO Pin | Description |
 |-----------|----------|----------|-------------|
-| Motor | Forward | 18 | Motor forward control |
-| Motor | Reverse | 19 | Motor reverse control |
-| Pump Relay | Control | 21 | Water pump relay control |
+| Motor | Forward | 18 | Skeleton leans forward over barrel |
+| Motor | Reverse | 19 | Skeleton returns to resting position |
+| Pump Relay | Control | 21 | Skeleton "getting sick" water effect |
 | Smoke Relay | Control | 20 | Smoke machine relay control |
 | Ultrasonic 1 | Trigger | 24 | Sensor 1 trigger pin |
 | Ultrasonic 1 | Echo | 23 | Sensor 1 echo pin |
@@ -141,8 +141,8 @@ The system will:
 - `maximum_valid`: Maximum reliable sensor reading
 
 ### Timing Settings
-- `motor_forward_duration`: How long barrel moves forward (seconds)
-- `motor_reverse_duration`: How long barrel moves back (seconds)
+- `motor_forward_duration`: How long skeleton leans forward over barrel (seconds)
+- `motor_reverse_duration`: How long skeleton returns to resting position (seconds)
 - `smoke_delay`: Delay before smoke activation (seconds)
 - `smoke_duration`: How long smoke runs (seconds)
 - `pump_duration`: How long water pump runs (seconds)
@@ -214,7 +214,7 @@ Check `halloween_barrel.log` for detailed operation logs and error messages.
 
 - **Electrical Safety**: Ensure all connections are secure and properly insulated
 - **Water Safety**: Use appropriate water pump and ensure electrical connections are protected from moisture
-- **Mechanical Safety**: Ensure barrel movement area is clear and secure
+- **Mechanical Safety**: Ensure skeleton movement area is clear and secure
 - **Emergency Stop**: System includes automatic emergency stop functionality
 - **Cooldown Periods**: Built-in delays prevent rapid-fire triggering
 
