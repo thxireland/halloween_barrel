@@ -27,8 +27,8 @@ validation:
 # Hardware pin configuration (BCM numbering)
 hardware:
   motor_pins:
-    forward: 18
-    reverse: 19
+    forward: 5
+    reverse: 6
   pump_relay_pin: 21
   smoke_relay_pin: 20
   ultrasonic_1_pins:
