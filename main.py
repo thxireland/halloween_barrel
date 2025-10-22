@@ -172,6 +172,8 @@ class HalloweenBarrelController:
             self.motor = Motor(motor_pins['forward'], motor_pins['reverse'])
             if not self.motor.is_initialized():
                 raise RuntimeError("Motor initialization failed")
+            self.motor.move_forward(4)
+            self.motor.move_reverse(2.5)
             
             # Initialize relays
             self.logger.info("Initializing relays...")
@@ -181,20 +183,55 @@ class HalloweenBarrelController:
             if not self.pump_relay.is_initialized() or not self.smoke_relay.is_initialized():
                 raise RuntimeError("Relay initialization failed")
             
-            # Initialize ultrasonic sensors
+            # Initialize ultrasonic sensors with fallback logic
             self.logger.info("Initializing ultrasonic sensors...")
             us1_pins = self.config['hardware']['ultrasonic_1_pins']
             us2_pins = self.config['hardware']['ultrasonic_2_pins']
-            self.ultrasonic_1 = UltrasonicSensor(us1_pins['trigger'], us1_pins['echo'])
-            self.ultrasonic_2 = UltrasonicSensor(us2_pins['trigger'], us2_pins['echo'])
             
-            if not self.ultrasonic_1.is_initialized():
-                raise RuntimeError("Ultrasonic sensor 1 initialization failed")
-            if not self.ultrasonic_2.is_initialized():
-                raise RuntimeError("Ultrasonic sensor 2 initialization failed")
+            # Try to initialize sensor 1
+            try:
+                self.ultrasonic_1 = UltrasonicSensor(us1_pins['trigger'], us1_pins['echo'])
+                if self.ultrasonic_1.is_initialized():
+                    self.sensor1_working = True
+                    self.logger.info("✅ Ultrasonic sensor 1 initialized successfully")
+                else:
+                    self.sensor1_working = False
+                    self.logger.warning("⚠️ Ultrasonic sensor 1 initialization failed")
+            except Exception as e:
+                self.sensor1_working = False
+                self.logger.warning(f"⚠️ Ultrasonic sensor 1 initialization error: {e}")
             
-            # Test ultrasonic sensors
+            # Try to initialize sensor 2
+            try:
+                self.ultrasonic_2 = UltrasonicSensor(us2_pins['trigger'], us2_pins['echo'])
+                if self.ultrasonic_2.is_initialized():
+                    self.sensor2_working = True
+                    self.logger.info("✅ Ultrasonic sensor 2 initialized successfully")
+                else:
+                    self.sensor2_working = False
+                    self.logger.warning("⚠️ Ultrasonic sensor 2 initialization failed")
+            except Exception as e:
+                self.sensor2_working = False
+                self.logger.warning(f"⚠️ Ultrasonic sensor 2 initialization error: {e}")
+            
+            # Check if at least one sensor is working
+            if not (self.sensor1_working or self.sensor2_working):
+                raise RuntimeError("Both ultrasonic sensors failed to initialize - at least one sensor is required")
+            
+            # Test ultrasonic sensors (non-blocking)
             self._test_ultrasonic_sensors()
+            
+            # Final check - ensure at least one sensor is still working after testing
+            if not (self.sensor1_working or self.sensor2_working):
+                raise RuntimeError("Both ultrasonic sensors failed testing - at least one working sensor is required")
+            
+            # Log final sensor status
+            if self.sensor1_working and self.sensor2_working:
+                self.logger.info("🎉 Both ultrasonic sensors initialized and tested successfully")
+            elif self.sensor1_working:
+                self.logger.info("🎉 System running with sensor 1 only (sensor 2 failed)")
+            elif self.sensor2_working:
+                self.logger.info("🎉 System running with sensor 2 only (sensor 1 failed)")
             
             # Initialize Govee light (optional)
             govee_config = self.config.get('optional_components', {}).get('govee_light', {})
@@ -239,10 +276,10 @@ class HalloweenBarrelController:
     
     def _test_ultrasonic_sensors(self) -> None:
         """
-        Test ultrasonic sensors with multiple readings to ensure they're working.
+        Test ultrasonic sensors with multiple readings to validate they're working.
         
-        Raises:
-            RuntimeError: If sensors fail to provide valid readings
+        This method is non-blocking and will not raise errors. It only updates
+        the sensor working status based on test results.
         """
         self.logger.info("Testing ultrasonic sensors...")
         
@@ -250,34 +287,62 @@ class HalloweenBarrelController:
         valid_readings_1 = 0
         valid_readings_2 = 0
         
-        for i in range(test_readings):
-            try:
-                distance_1 = self.ultrasonic_1.read_distance()
-                distance_2 = self.ultrasonic_2.read_distance()
-                
-                if distance_1 is not None:
-                    valid_readings_1 += 1
-                    self.logger.info(f"Ultrasonic 1 reading {i+1}: {distance_1:.1f} cm")
-                
-                if distance_2 is not None:
-                    valid_readings_2 += 1
-                    self.logger.info(f"Ultrasonic 2 reading {i+1}: {distance_2:.1f} cm")
-                
-                time.sleep(0.1)
-                
-            except Exception as e:
-                self.logger.error(f"Error during sensor test reading {i+1}: {e}")
+        # Test sensor 1 if it's marked as working
+        if self.sensor1_working and self.ultrasonic_1:
+            for i in range(test_readings):
+                try:
+                    distance_1 = self.ultrasonic_1.read_distance()
+                    if distance_1 is not None:
+                        valid_readings_1 += 1
+                        self.logger.info(f"Ultrasonic 1 reading {i+1}: {distance_1:.1f} cm")
+                    else:
+                        self.logger.debug(f"Ultrasonic 1 reading {i+1}: No reading")
+                    time.sleep(0.1)
+                except Exception as e:
+                    self.logger.warning(f"Sensor 1 test reading {i+1} error: {e}")
         
-        # Require at least 60% valid readings
+        # Test sensor 2 if it's marked as working
+        if self.sensor2_working and self.ultrasonic_2:
+            for i in range(test_readings):
+                try:
+                    distance_2 = self.ultrasonic_2.read_distance()
+                    if distance_2 is not None:
+                        valid_readings_2 += 1
+                        self.logger.info(f"Ultrasonic 2 reading {i+1}: {distance_2:.1f} cm")
+                    else:
+                        self.logger.debug(f"Ultrasonic 2 reading {i+1}: No reading")
+                    time.sleep(0.1)
+                except Exception as e:
+                    self.logger.warning(f"Sensor 2 test reading {i+1} error: {e}")
+        
+        # Require at least 60% valid readings for a sensor to be considered working
         min_valid_readings = int(test_readings * 0.6)
         
-        if valid_readings_1 < min_valid_readings:
-            raise RuntimeError(f"Ultrasonic sensor 1 failed test: only {valid_readings_1}/{test_readings} valid readings")
+        # Update sensor 1 status based on test results
+        if self.sensor1_working:
+            if valid_readings_1 < min_valid_readings:
+                self.sensor1_working = False
+                self.logger.warning(f"⚠️ Ultrasonic sensor 1 failed test: only {valid_readings_1}/{test_readings} valid readings")
+            else:
+                self.logger.info(f"✅ Ultrasonic sensor 1 test passed: {valid_readings_1}/{test_readings} valid readings")
         
-        if valid_readings_2 < min_valid_readings:
-            raise RuntimeError(f"Ultrasonic sensor 2 failed test: only {valid_readings_2}/{test_readings} valid readings")
+        # Update sensor 2 status based on test results
+        if self.sensor2_working:
+            if valid_readings_2 < min_valid_readings:
+                self.sensor2_working = False
+                self.logger.warning(f"⚠️ Ultrasonic sensor 2 failed test: only {valid_readings_2}/{test_readings} valid readings")
+            else:
+                self.logger.info(f"✅ Ultrasonic sensor 2 test passed: {valid_readings_2}/{test_readings} valid readings")
         
-        self.logger.info(f"Ultrasonic sensor test passed: Sensor 1: {valid_readings_1}/{test_readings}, Sensor 2: {valid_readings_2}/{test_readings}")
+        # Final status check
+        if self.sensor1_working and self.sensor2_working:
+            self.logger.info("✅ Both ultrasonic sensors are working properly")
+        elif self.sensor1_working:
+            self.logger.info("✅ Only sensor 1 is working (sensor 2 failed)")
+        elif self.sensor2_working:
+            self.logger.info("✅ Only sensor 2 is working (sensor 1 failed)")
+        else:
+            self.logger.error("❌ Both sensors failed testing - system will not function properly")
     
     def get_validated_distance(self) -> Optional[float]:
         """
