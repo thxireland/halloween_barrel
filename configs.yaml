@@ -4,25 +4,7 @@
 # Distance thresholds for triggering different behaviors
 distance_thresholds:
   warning: 100.0    # cm - object approaching warning
-  trigger: 50.0     # cm - execute Halloween sequence
-  minimum_valid: 2.0    # cm - minimum reliable distance for ultrasonic sensors
-  maximum_valid: 400.0  # cm - maximum reliable distance for ultrasonic sensors
-
-# Timing configuration for all operations
-timing:
-  motor_forward_duration: 2.5    # seconds - how long to move barrel forward
-  motor_reverse_duration: 2.5    # seconds - how long to move barrel back
-  smoke_delay: 0.5               # seconds - delay before activating smoke
-  smoke_duration: 1.0            # seconds - how long to run smoke
-  pump_duration: 6.0             # seconds - how long to run water pump
-  cooldown_duration: 10.0        # seconds - minimum time between sequences
-  reading_interval: 0.1          # seconds - time between distance readings
-
-# Validation settings for distance readings
-validation:
-  consecutive_readings: 3        # number of consecutive readings for validation
-  reading_tolerance: 10.0        # cm - tolerance for consecutive readings
-  max_failed_readings: 5         # max consecutive failed readings before error
+  trigger: 50.0     # cm - execute Halloween sequence    # seconds - time between distance readings
 
 # Hardware pin configuration (BCM numbering)
 hardware:
@@ -31,33 +13,15 @@ hardware:
     reverse: 5
   pump_relay_pin: 21
   smoke_relay_pin: 20
-  ultrasonic_1_pins:
+  ultrasonic_pins:
     trigger: 24
     echo: 23
   ultrasonic_2_pins:
-    trigger: 7
-    echo: 8
-
-# Optional components configuration
-optional_components:
-  govee_light:
-    enabled: true               # Set to true to enable Govee light
-    ip_address: "192.168.1.212"  # IP address of Govee light
-    port: 4003                   # UDP port for Govee communication
-  
-  music_player:
-    enabled: false               # Set to true to enable music
-    audio_file: "/path/to/halloween_sound.mp3"  # Path to audio file
-    volume: 0.7                  # Volume level (0.0 to 1.0)
+  govee_light:            # Set to true to enable Govee light
+    ip_address: "192.168.1.212"  # IP address of Govee light                # UDP port for Govee communication              # Volume level (0.0 to 1.0)
 
 # Logging configuration
 logging:
   level: "INFO"                  # Logging level: DEBUG, INFO, WARNING, ERROR
   file: "halloween_barrel.log"   # Log file path
   console: true                  # Enable console logging
-
-# Safety and system settings
-safety:
-  emergency_stop_enabled: true   # Enable emergency stop functionality
-  max_sequence_duration: 30.0    # seconds - maximum time for a sequence
-  auto_cleanup_on_error: true    # Automatically cleanup on errors
