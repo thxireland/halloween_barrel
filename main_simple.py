@@ -53,7 +53,7 @@ def main():
     """Main entry point."""
     setup_hardware()
     while True:
-        distance = ultrasonic.get_distance()
+        distance = ultrasonic.read_distance()
         if not distance:
             continue
         time.sleep(1)
