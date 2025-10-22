@@ -184,8 +184,10 @@ class HalloweenBarrelController:
             self.ultrasonic_1 = UltrasonicSensor(us1_pins['trigger'], us1_pins['echo'])
             self.ultrasonic_2 = UltrasonicSensor(us2_pins['trigger'], us2_pins['echo'])
             
-            if not self.ultrasonic_1.is_initialized() or not self.ultrasonic_2.is_initialized():
-                raise RuntimeError("Ultrasonic sensor initialization failed")
+            if not self.ultrasonic_1.is_initialized():
+                raise RuntimeError("Ultrasonic sensor 1 initialization failed")
+            if not self.ultrasonic_2.is_initialized():
+                raise RuntimeError("Ultrasonic sensor 2 initialization failed")
             
             # Test ultrasonic sensors
             self._test_ultrasonic_sensors()
