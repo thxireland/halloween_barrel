@@ -185,7 +185,7 @@ def test_motor_error_handling(logger):
     
     # Test invalid duration
     try:
-        motor = Motor(18, 19)
+        motor = Motor(5, 6)
         logger.info("Testing invalid duration (negative)...")
         motor.move_forward(-1.0)
         logger.error("❌ Should have raised ValueError for negative duration")
@@ -200,7 +200,7 @@ def test_motor_error_handling(logger):
         return False
     
     try:
-        motor = Motor(18, 19)
+        motor = Motor(5, 6)
         logger.info("Testing invalid duration (too long)...")
         motor.move_forward(100.0)  # Too long
         logger.error("❌ Should have raised ValueError for too long duration")
@@ -223,7 +223,7 @@ def test_motor_cleanup(logger):
     logger.info("=" * 50)
     
     try:
-        motor = Motor(18, 19)
+        motor = Motor(5, 6)
         if not motor.is_initialized():
             logger.error("❌ Motor not initialized, skipping cleanup test")
             return False
@@ -252,7 +252,7 @@ def test_motor_context_manager(logger):
     try:
         logger.info("Testing motor context manager...")
         
-        with Motor(18, 19) as motor:
+        with Motor(5, 6) as motor:
             if motor.is_initialized():
                 logger.info("✅ Motor initialized in context manager")
                 
@@ -282,7 +282,7 @@ def run_interactive_test(logger):
     logger.info("=" * 50)
     
     try:
-        motor = Motor(18, 19)
+        motor = Motor(5, 6)
         if not motor.is_initialized():
             logger.error("❌ Motor not initialized, skipping interactive test")
             return False
@@ -334,7 +334,7 @@ def main():
     logger.info("🎃 Halloween Barrel Motor Control Test")
     logger.info("=" * 60)
     logger.info("This script will test the motor control functionality.")
-    logger.info("Make sure the motor is properly connected to GPIO pins 18 and 19!")
+    logger.info("Make sure the motor is properly connected to GPIO pins 5 and 6!")
     logger.info("=" * 60)
     
     # Test results
