@@ -56,14 +56,13 @@ def main():
         distance = ultrasonic.read_distance()
         if not distance:
             continue
-        time.sleep(1)
         if distance < warning_distance:
             logger.info(f"Distance: {distance} cm")
             logger.info("Warning: Object is approaching")
         if distance < trigger_distance:
             logger.info(f"Distance: {distance} cm")
             logger.info("Trigger: Object is close")
-            motor.move_formward(4)
+            motor.move_forward(4)
             logger.info("Moving forward")
             pump_relay.on()
             logger.info("Pump relay on")
@@ -84,7 +83,7 @@ def main():
             vomit_4.play()
             logger.info("Playing vomit 4")
             motor.stop()
-            time.sleep(4)
+            time.sleep(2)
             pump_relay.off()
             logger.info("Pump relay off")
             time.sleep(.5)
