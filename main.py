@@ -3,6 +3,7 @@ import time
 import signal
 import sys
 import yaml
+import os
 from pathlib import Path
 from typing import Optional, Dict, Any
 from plugins.motor import Motor
@@ -11,9 +12,11 @@ from plugins.relay import Relay
 from plugins.govee_plugin import GoveeLight
 from plugins.music_player import MP3Player
 
-vomit_1 = MP3Player("/music_files/vomit_1_sec.mp3")
-vomit_2 = MP3Player("/music_files/vomit_2_sec.mp3")
-vomit_4 = MP3Player("/music_files/vomit_4_sec.mp3")
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+vomit_1 = MP3Player(f"{current_dir}/music_files/vomit_1_sec.mp3")
+vomit_2 = MP3Player(f"{current_dir}/music_files/vomit_2_sec.mp3")
+vomit_4 = MP3Player(f"{current_dir}/music_files/vomit_4_sec.mp3")
 
 lights = GoveeLight("192.168.1.212")
 
