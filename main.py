@@ -122,6 +122,10 @@ class HalloweenBarrelController:
         # Distance reading cache
         self.distance_history = []
         
+        # Sensor health tracking
+        self.sensor1_working = True
+        self.sensor2_working = True
+        
         self.logger.info("Halloween Barrel Controller initializing...")
     
     def _setup_logging(self) -> logging.Logger:
@@ -253,11 +257,11 @@ class HalloweenBarrelController:
                 
                 if distance_1 is not None:
                     valid_readings_1 += 1
-                    self.logger.debug(f"Ultrasonic 1 reading {i+1}: {distance_1:.1f} cm")
+                    self.logger.info(f"Ultrasonic 1 reading {i+1}: {distance_1:.1f} cm")
                 
                 if distance_2 is not None:
                     valid_readings_2 += 1
-                    self.logger.debug(f"Ultrasonic 2 reading {i+1}: {distance_2:.1f} cm")
+                    self.logger.info(f"Ultrasonic 2 reading {i+1}: {distance_2:.1f} cm")
                 
                 time.sleep(0.1)
                 
@@ -277,37 +281,68 @@ class HalloweenBarrelController:
     
     def get_validated_distance(self) -> Optional[float]:
         """
-        Get a validated distance reading using multiple sensors and validation layers.
+        Get a validated distance reading using multiple sensors with fallback logic.
+        
+        If both sensors are working, uses the shortest reading.
+        If only one sensor is working, uses that sensor.
+        If neither sensor is working, returns None.
         
         Returns:
-            Optional[float]: Validated distance in cm, or None if validation fails
+            Optional[float]: Validated distance in cm, or None if no valid readings
         """
         try:
-            # Get readings from both sensors
-            distance_1 = self.ultrasonic_1.read_distance()
-            distance_2 = self.ultrasonic_2.read_distance()
-            
-            # Validate individual readings
             valid_distances = []
             
-            if distance_1 is not None and self._validate_distance_reading(distance_1):
-                valid_distances.append(distance_1)
-                self.logger.debug(f"Valid distance from sensor 1: {distance_1:.1f} cm")
+            # Try sensor 1 if it's marked as working
+            if self.sensor1_working and self.ultrasonic_1:
+                try:
+                    distance_1 = self.ultrasonic_1.read_distance()
+                    if distance_1 is not None and self._validate_distance_reading(distance_1):
+                        valid_distances.append(distance_1)
+                        self.logger.debug(f"Valid distance from sensor 1: {distance_1:.1f} cm")
+                    else:
+                        self.logger.debug("Sensor 1: No valid reading")
+                except Exception as e:
+                    self.logger.warning(f"Sensor 1 error: {e}")
+                    self.sensor1_working = False
             
-            if distance_2 is not None and self._validate_distance_reading(distance_2):
-                valid_distances.append(distance_2)
-                self.logger.debug(f"Valid distance from sensor 2: {distance_2:.1f} cm")
+            # Try sensor 2 if it's marked as working
+            if self.sensor2_working and self.ultrasonic_2:
+                try:
+                    distance_2 = self.ultrasonic_2.read_distance()
+                    if distance_2 is not None and self._validate_distance_reading(distance_2):
+                        valid_distances.append(distance_2)
+                        self.logger.debug(f"Valid distance from sensor 2: {distance_2:.1f} cm")
+                    else:
+                        self.logger.debug("Sensor 2: No valid reading")
+                except Exception as e:
+                    self.logger.warning(f"Sensor 2 error: {e}")
+                    self.sensor2_working = False
             
+            # Check if we have any valid readings
             if not valid_distances:
                 self.logger.warning("No valid distance readings from either sensor")
                 self.failed_readings_count += 1
+                
+                # If both sensors are marked as not working, try to reinitialize them
+                if not self.sensor1_working and not self.sensor2_working:
+                    self.logger.info("Both sensors marked as not working, attempting reinitialization...")
+                    self._attempt_sensor_recovery()
+                
                 return None
             
             # Reset failed readings counter on successful reading
             self.failed_readings_count = 0
             
-            # Use the shortest valid distance
+            # Use the shortest valid distance (closest object)
             shortest_distance = min(valid_distances)
+            
+            # Log which sensors are being used
+            if len(valid_distances) == 2:
+                self.logger.debug(f"Using both sensors, shortest distance: {shortest_distance:.1f} cm")
+            else:
+                working_sensor = "sensor 1" if self.sensor1_working else "sensor 2"
+                self.logger.debug(f"Using only {working_sensor}, distance: {shortest_distance:.1f} cm")
             
             # Add to history for consistency checking
             self.distance_history.append(shortest_distance)
@@ -326,6 +361,44 @@ class HalloweenBarrelController:
             self.logger.error(f"Error getting validated distance: {e}")
             self.failed_readings_count += 1
             return None
+    
+    def _attempt_sensor_recovery(self) -> None:
+        """
+        Attempt to recover failed sensors by reinitializing them.
+        """
+        self.logger.info("Attempting sensor recovery...")
+        
+        # Try to recover sensor 1
+        if not self.sensor1_working and self.ultrasonic_1:
+            try:
+                # Test if sensor 1 can provide a reading
+                distance = self.ultrasonic_1.read_distance()
+                if distance is not None and self._validate_distance_reading(distance):
+                    self.sensor1_working = True
+                    self.logger.info("✅ Sensor 1 recovered")
+                else:
+                    self.logger.warning("Sensor 1 still not working")
+            except Exception as e:
+                self.logger.warning(f"Sensor 1 recovery failed: {e}")
+        
+        # Try to recover sensor 2
+        if not self.sensor2_working and self.ultrasonic_2:
+            try:
+                # Test if sensor 2 can provide a reading
+                distance = self.ultrasonic_2.read_distance()
+                if distance is not None and self._validate_distance_reading(distance):
+                    self.sensor2_working = True
+                    self.logger.info("✅ Sensor 2 recovered")
+                else:
+                    self.logger.warning("Sensor 2 still not working")
+            except Exception as e:
+                self.logger.warning(f"Sensor 2 recovery failed: {e}")
+        
+        # Log final status
+        if self.sensor1_working or self.sensor2_working:
+            self.logger.info(f"Sensor recovery complete: Sensor 1: {self.sensor1_working}, Sensor 2: {self.sensor2_working}")
+        else:
+            self.logger.error("Sensor recovery failed: No sensors working")
     
     def _validate_distance_reading(self, distance: float) -> bool:
         """
@@ -576,12 +649,25 @@ class HalloweenBarrelController:
             return False
         
         # Check if all critical components are initialized
-        critical_components = [self.motor, self.pump_relay, self.smoke_relay, self.ultrasonic_1, self.ultrasonic_2]
+        critical_components = [self.motor, self.pump_relay, self.smoke_relay]
         
         for component in critical_components:
             if component is None or not component.is_initialized():
                 self.logger.error(f"Critical component not initialized: {component}")
                 return False
+        
+        # Check ultrasonic sensors - at least one must be working
+        if not (self.sensor1_working or self.sensor2_working):
+            self.logger.error("No ultrasonic sensors working - both sensors failed")
+            return False
+        
+        # Log sensor status
+        if self.sensor1_working and self.sensor2_working:
+            self.logger.debug("Both ultrasonic sensors working")
+        elif self.sensor1_working:
+            self.logger.info("Using only sensor 1 (sensor 2 failed)")
+        elif self.sensor2_working:
+            self.logger.info("Using only sensor 2 (sensor 1 failed)")
         
         return True
     
