@@ -11,6 +11,12 @@ from plugins.relay import Relay
 from plugins.govee_plugin import GoveeLight
 from plugins.music_player import MP3Player
 
+vomit_1 = MP3Player("/music_files/vomit_1_sec.mp3")
+vomit_2 = MP3Player("/music_files/vomit_2_sec.mp3")
+vomit_4 = MP3Player("/music_files/vomit_4_sec.mp3")
+
+lights = GoveeLight("192.168.1.212")
+
 def load_config(config_path: str = "configs.yaml") -> Dict[str, Any]:
     """
     Load configuration from YAML file.
@@ -76,6 +82,7 @@ def load_config(config_path: str = "configs.yaml") -> Dict[str, Any]:
             'govee_light': {'enabled': False, 'ip_address': '192.168.1.100', 'port': 4003},
             'music_player': {'enabled': False, 'audio_file': '/path/to/halloween_sound.mp3', 'volume': 0.7}
         }
+    
     
     return config
 
@@ -376,7 +383,13 @@ class HalloweenBarrelController:
     
     def execute_halloween_sequence(self) -> bool:
         """
-        Execute the complete Halloween barrel sequence.
+        Execute the complete Halloween barrel sequence with colored lighting and synchronized sound effects.
+        
+        Sequence phases:
+        1. YELLOW - Warning phase with skeleton movement
+        2. GREEN - Preparation phase with smoke
+        3. RED - Pump activation phase with water spray
+        4. OFF - Return to normal
         
         Returns:
             bool: True if sequence completed successfully, False otherwise
@@ -393,71 +406,73 @@ class HalloweenBarrelController:
                 self.logger.info(f"Sequence in cooldown, {remaining_cooldown:.1f} seconds remaining")
                 return False
             
-            # Turn on Govee light if available
-            if self.govee_light:
-                try:
-                    self.govee_light.set_color(255, 0, 0)  # Red color
-                    self.govee_light.turn_on()
-                    self.logger.info("Govee light activated")
-                except Exception as e:
-                    self.logger.error(f"Failed to activate Govee light: {e}")
+            # PHASE 1: YELLOW WARNING PHASE
+            self.logger.info("Phase 1: Yellow warning phase - Skeleton movement")
+            self._set_light_color(255, 255, 0)  # Yellow
+            self._play_sound_effect('warning')  # Play 1-second vomiting sound
             
-            # Start music if available
-            if self.music_player:
-                try:
-                    self.music_player.play()
-                    self.logger.info("Halloween music started")
-                except Exception as e:
-                    self.logger.error(f"Failed to start music: {e}")
-            
-            # Move barrel forward
-            self.logger.info("Moving barrel forward...")
+            # Move skeleton forward during yellow phase
+            self.logger.info("Moving skeleton forward...")
             if not self.motor.move_forward(self.config['timing']['motor_forward_duration']):
                 raise RuntimeError("Motor forward movement failed")
+            
+            time.sleep(2.0)  # Wait for yellow phase
+            
+            # PHASE 2: GREEN PREPARATION PHASE
+            self.logger.info("Phase 2: Green preparation phase - Smoke activation")
+            self._set_light_color(0, 255, 0)  # Green
             
             # Wait before smoke
             time.sleep(self.config['timing']['smoke_delay'])
             
-            # Activate smoke
+            # Activate smoke during green phase
             self.logger.info("Activating smoke...")
             if not self.smoke_relay.on():
                 raise RuntimeError("Failed to activate smoke relay")
             
-            time.sleep(self.config['timing']['smoke_duration'])
+            time.sleep(1.5)  # Wait for green phase
             
-            # Activate pump (water spray)
+            # PHASE 3: RED PUMP ACTIVATION PHASE
+            self.logger.info("Phase 3: Red pump activation phase - Water spray")
+            self._set_light_color(255, 0, 0)  # Red
+            
+            # Activate pump (water spray) during red phase
             self.logger.info("Activating pump...")
             if not self.pump_relay.on():
                 raise RuntimeError("Failed to activate pump relay")
             
-            # Keep pump running for configured duration
-            time.sleep(self.config['timing']['pump_duration'])
-            
-            # Deactivate smoke
+            time.sleep(0.5)
+            self._play_sound_effect('pump')  # Play 1-second vomiting sound synchronized with pump activation
+
+            # Deactivate smoke during red phase
             self.logger.info("Deactivating smoke...")
             if not self.smoke_relay.off():
                 raise RuntimeError("Failed to deactivate smoke relay")
+            
+            # Keep pump running for configured duration
+            time.sleep(4)
+            self._play_sound_effect('preparation')  # Play 4-second vomiting sound synchronized with pump
+            time.sleep(2)
             
             # Deactivate pump
             self.logger.info("Deactivating pump...")
             if not self.pump_relay.off():
                 raise RuntimeError("Failed to deactivate pump relay")
             
+            # PHASE 4: COMPLETION PHASE
+            self.logger.info("Phase 4: Completion phase - Skeleton return")
+            
             # Wait before reverse movement
             time.sleep(1.0)
             
-            # Move barrel back
-            self.logger.info("Moving barrel back...")
+            # Move skeleton back
+            self.logger.info("Moving skeleton back...")
             if not self.motor.move_reverse(self.config['timing']['motor_reverse_duration']):
                 raise RuntimeError("Motor reverse movement failed")
             
-            # Turn off Govee light if available
-            if self.govee_light:
-                try:
-                    self.govee_light.turn_off()
-                    self.logger.info("Govee light deactivated")
-                except Exception as e:
-                    self.logger.error(f"Failed to deactivate Govee light: {e}")
+            # Turn off light
+            self._set_light_color(0, 0, 0)  # Off
+            self.logger.info("Lighting deactivated")
             
             # Update last trigger time
             self.last_trigger_time = current_time
@@ -469,6 +484,48 @@ class HalloweenBarrelController:
             self.logger.error(f"Halloween sequence failed: {e}")
             self._emergency_stop()
             return False
+    
+    def _set_light_color(self, red: int, green: int, blue: int) -> None:
+        """
+        Set the Govee light color with error handling.
+        
+        Args:
+            red: Red component (0-255)
+            green: Green component (0-255)
+            blue: Blue component (0-255)
+        """
+        if self.govee_light:
+            try:
+                self.govee_light.set_color(red, green, blue)
+                if red == 0 and green == 0 and blue == 0:
+                    self.govee_light.turn_off()
+                else:
+                    self.govee_light.turn_on()
+                self.logger.debug(f"Light set to RGB({red}, {green}, {blue})")
+            except Exception as e:
+                self.logger.error(f"Failed to set light color: {e}")
+    
+    def _play_sound_effect(self, sound_type: str) -> None:
+        """
+        Play a vomiting sound effect based on the type.
+        
+        Args:
+            sound_type: Type of sound to play ('warning', 'preparation', 'pump')
+        """
+        try:
+            if sound_type == 'warning':
+                vomit_1.play()
+                self.logger.debug("Playing warning vomiting sound (1 sec)")
+            elif sound_type == 'preparation':
+                vomit_2.play()
+                self.logger.debug("Playing preparation vomiting sound (2 sec)")
+            elif sound_type == 'pump':
+                vomit_4.play()
+                self.logger.debug("Playing pump vomiting sound (4 sec)")
+            else:
+                self.logger.warning(f"Unknown sound type: {sound_type}")
+        except Exception as e:
+            self.logger.error(f"Failed to play vomiting sound {sound_type}: {e}")
     
     def _emergency_stop(self) -> None:
         """Emergency stop all active components."""
@@ -489,6 +546,15 @@ class HalloweenBarrelController:
             
             if self.music_player:
                 self.music_player.stop()
+            
+            # Stop all vomiting sounds
+            try:
+                vomit_1.stop()
+                vomit_2.stop()
+                vomit_4.stop()
+                self.logger.debug("Stopped all vomiting sounds")
+            except Exception as e:
+                self.logger.error(f"Error stopping vomiting sounds: {e}")
                 
         except Exception as e:
             self.logger.error(f"Error during emergency stop: {e}")
@@ -586,6 +652,15 @@ class HalloweenBarrelController:
             
             if self.music_player:
                 self.music_player.cleanup()
+            
+            # Clean up vomiting sound players
+            try:
+                vomit_1.cleanup()
+                vomit_2.cleanup()
+                vomit_4.cleanup()
+                self.logger.debug("Cleaned up vomiting sound players")
+            except Exception as e:
+                self.logger.error(f"Error cleaning up vomiting sounds: {e}")
                 
             self.logger.info("Hardware cleanup completed")
             
