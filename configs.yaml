@@ -41,8 +41,8 @@ hardware:
 # Optional components configuration
 optional_components:
   govee_light:
-    enabled: false               # Set to true to enable Govee light
-    ip_address: "192.168.1.100"  # IP address of Govee light
+    enabled: true               # Set to true to enable Govee light
+    ip_address: "192.168.1.212"  # IP address of Govee light
     port: 4003                   # UDP port for Govee communication
   
   music_player:

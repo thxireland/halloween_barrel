@@ -637,13 +637,13 @@ class HalloweenBarrelController:
             green: Green component (0-255)
             blue: Blue component (0-255)
         """
-        if lights:
+        if self.govee_light:
             try:
-                self.lights.set_color(red, green, blue)
+                self.govee_light.set_color(red, green, blue)
                 if red == 0 and green == 0 and blue == 0:
-                    self.lights.turn_off()
+                    self.govee_light.turn_off()
                 else:
-                    self.lights.turn_on()
+                    self.govee_light.turn_on()
                 self.logger.debug(f"Light set to RGB({red}, {green}, {blue})")
             except Exception as e:
                 self.logger.error(f"Failed to set light color: {e}")
