@@ -14,8 +14,8 @@ hardware:
   pump_relay_pin: 21
   smoke_relay_pin: 20
   ultrasonic_pins:
-    trigger: 24
-    echo: 23
+    trigger: 8
+    echo: 7
   ultrasonic_2_pins:
   govee_light:            # Set to true to enable Govee light
     ip_address: "192.168.1.212"  # IP address of Govee light                # UDP port for Govee communication              # Volume level (0.0 to 1.0)
