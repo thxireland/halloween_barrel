@@ -25,3 +25,124 @@ logging:
   level: "INFO"                  # Logging level: DEBUG, INFO, WARNING, ERROR
   file: "halloween_barrel.log"   # Log file path
   console: true                  # Enable console logging
+
+# Hardware setup sequence (executed once at startup)
+# Action types: motor, relay, light, music, sleep
+# Motor actions: forward (duration), reverse (duration), stop
+# Relay actions: on, off (name: pump or smoke)
+# Light actions: set_color (colour: {r, g, b}), flash (amount)
+# Music actions: play (file: vomit_1_sec.mp3, vomit_2_sec.mp3, vomit_4_sec.mp3)
+# Sleep: duration in seconds
+setup_sequence:
+  - type: light
+    action: set_color
+    colour:
+      r: 100
+      g: 100
+      b: 0
+  - type: motor
+    action: forward
+    duration: 4
+  - type: motor
+    action: reverse
+    duration: 2.5
+  - type: relay
+    name: pump
+    action: on
+  - type: relay
+    name: smoke
+    action: on
+  - type: sleep
+    duration: 1
+  - type: relay
+    name: pump
+    action: off
+  - type: relay
+    name: smoke
+    action: off
+  - type: motor
+    action: stop
+
+# Trigger sequence configuration
+# Action types: motor, relay, light, music, sleep
+# Motor actions: forward (duration), reverse (duration), stop
+# Relay actions: on, off (name: pump or smoke)
+# Light actions: set_color (colour: {r, g, b}), flash (amount)
+# Music actions: play (file: vomit_1_sec.mp3, vomit_2_sec.mp3, vomit_4_sec.mp3)
+# Sleep: duration in seconds
+sequence:
+  - type: motor
+    action: forward
+    duration: 4
+  - type: relay
+    name: smoke
+    action: on
+  - type: sleep
+    duration: 0.5
+  - type: relay
+    name: smoke
+    action: off
+  - type: relay
+    name: pump
+    action: on
+  - type: music
+    file: vomit_4_sec.mp3
+    action: play
+  - type: light
+    action: set_color
+    colour:
+      r: 0
+      g: 255
+      b: 0
+  - type: light
+    action: flash
+    amount: 15
+  - type: sleep
+    duration: 0.5
+  - type: music
+    file: vomit_4_sec.mp3
+    action: play
+  - type: relay
+    name: smoke
+    action: on
+  - type: sleep
+    duration: 0.5
+  - type: relay
+    name: smoke
+    action: off
+  - type: music
+    file: vomit_2_sec.mp3
+    action: play
+  - type: sleep
+    duration: 2
+  - type: light
+    action: set_color
+    colour:
+      r: 255
+      g: 0
+      b: 0
+  - type: music
+    file: vomit_4_sec.mp3
+    action: play
+  - type: motor
+    action: stop
+  - type: sleep
+    duration: 2
+  - type: relay
+    name: pump
+    action: off
+  - type: sleep
+    duration: 0.5
+  - type: motor
+    action: reverse
+    duration: 2.5
+  - type: sleep
+    duration: 1
+  - type: light
+    action: set_color
+    colour:
+      r: 100
+      g: 100
+      b: 0
+  - type: sleep
+    duration: 5
