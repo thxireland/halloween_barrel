@@ -1,24 +1,24 @@
 # 🎃 Halloween Barrel Project
 
-An automated Halloween barrel display that uses ultrasonic sensors to detect approaching trick-or-treaters and triggers a spooky sequence including skeleton movement, smoke effects, water spray, lighting, and music.
+An automated Halloween barrel display that uses ultrasonic sensors to detect approaching trick-or-treaters and triggers a spooky sequence including skeleton movement, smoke effects, water spray, lighting, and music. The entire sequence is configurable via YAML without requiring code changes.
 
 ## 🌟 Features
 
-- **Dual Ultrasonic Sensors** - Reliable object detection with validation
+- **Ultrasonic Sensor Detection** - Reliable object detection for triggering sequences
 - **Automated Skeleton Movement** - Linear actuator controls skeleton leaning over barrel
 - **Smoke Effects** - Atmospheric fog machine control
 - **Water Spray** - Skeleton "getting sick" effect through mouth
-- **Smart Lighting** - Govee light integration (optional)
-- **Halloween Music** - MP3 audio playback (optional)
+- **Smart Lighting** - Govee light integration with color changes and flashing effects
+- **Halloween Music** - MP3 audio playback synchronized with effects
+- **YAML-Based Configuration** - Easy sequence customization without code changes
 - **Comprehensive Logging** - Detailed operation tracking
-- **Safety Features** - Emergency stop, cooldown periods, health monitoring
-- **YAML Configuration** - Easy customization without code changes
+- **Sequential Action System** - Fully configurable action sequences
 
 ## 🛠️ Hardware Requirements
 
 ### Required Components
 - Raspberry Pi (any model with GPIO)
-- 2x HC-SR04 Ultrasonic Sensors
+- 1x HC-SR04 Ultrasonic Sensor
 - Linear Actuator or DC Motor with Motor Control Board
 - 2x Relay Modules (5V)
 - Smoke Machine
@@ -33,14 +33,12 @@ An automated Halloween barrel display that uses ultrasonic sensors to detect app
 
 | Component | Pin Type | GPIO Pin | Description |
 |-----------|----------|----------|-------------|
-| Motor | Forward | 18 | Skeleton leans forward over barrel |
-| Motor | Reverse | 19 | Skeleton returns to resting position |
+| Motor | Forward | 6 | Skeleton leans forward over barrel |
+| Motor | Reverse | 5 | Skeleton returns to resting position |
 | Pump Relay | Control | 21 | Skeleton "getting sick" water effect |
 | Smoke Relay | Control | 20 | Smoke machine relay control |
-| Ultrasonic 1 | Trigger | 24 | Sensor 1 trigger pin |
-| Ultrasonic 1 | Echo | 23 | Sensor 1 echo pin |
-| Ultrasonic 2 | Trigger | 7 | Sensor 2 trigger pin |
-| Ultrasonic 2 | Echo | 8 | Sensor 2 echo pin |
+| Ultrasonic | Trigger | 8 | Sensor trigger pin |
+| Ultrasonic | Echo | 7 | Sensor echo pin |
 
 ## 📦 Installation
 
@@ -60,57 +58,171 @@ pip install RPi.GPIO pygame pyyaml
 2. Ensure proper power supplies for all components
 3. Test each component individually before running the full system
 
-### 4. Configuration
+### 4. Music Files Setup
+Place your MP3 files in the `music_files/` directory:
+- `vomit_1_sec.mp3`
+- `vomit_2_sec.mp3`
+- `vomit_4_sec.mp3`
+
+You can add additional files and reference them in your sequence configuration.
+
+### 5. Configuration
+
 Edit `configs.yaml` to match your setup:
 
+#### Basic Configuration
 ```yaml
-# Example configuration
+# Distance thresholds
 distance_thresholds:
-  warning: 100.0    # cm - object approaching
-  trigger: 50.0     # cm - execute sequence
-  minimum_valid: 2.0
-  maximum_valid: 400.0
+  warning: 100.0    # cm - object approaching warning
+  trigger: 50.0     # cm - execute Halloween sequence
 
-timing:
-  motor_forward_duration: 2.5
-  motor_reverse_duration: 2.5
-  smoke_delay: 0.5
-  smoke_duration: 1.0
-  pump_duration: 6.0
-  cooldown_duration: 10.0
-
+# Hardware pins (BCM numbering)
 hardware:
   motor_pins:
-    forward: 18
-    reverse: 19
+    forward: 6
+    reverse: 5
   pump_relay_pin: 21
   smoke_relay_pin: 20
-  # ... more settings
+  ultrasonic_pins:
+    trigger: 8
+    echo: 7
+  govee_light:
+    ip_address: "192.168.1.212"  # Your Govee light IP
 ```
 
-### 5. Optional Components Setup
-
-#### Govee Light
+#### Govee Light Setup
 1. Connect your Govee light to WiFi
 2. Find the device IP address in your router settings
-3. Enable and configure in `configs.yaml`:
+3. Configure in `configs.yaml`:
 ```yaml
-optional_components:
+hardware:
   govee_light:
-    enabled: true
-    ip_address: "192.168.1.100"  # Your light's IP
-    port: 4003
+    ip_address: "192.168.1.212"  # Your light's IP
 ```
 
-#### Music Player
-1. Place your Halloween audio file in the project directory
-2. Configure in `configs.yaml`:
+## ⚙️ Sequence Configuration
+
+The project uses a powerful YAML-based sequence system that allows you to configure all actions without modifying code.
+
+### Action Types
+
+#### Motor Actions
+Control the linear actuator/skeleton movement:
 ```yaml
-optional_components:
-  music_player:
-    enabled: true
-    audio_file: "/path/to/halloween_sound.mp3"
-    volume: 0.7
+- type: motor
+  action: forward    # Options: forward, reverse, stop
+  duration: 4        # Duration in seconds (for forward/reverse)
+```
+
+#### Relay Actions
+Control the pump and smoke machine:
+```yaml
+- type: relay
+  name: pump         # Options: pump, smoke
+  action: on         # Options: on, off
+```
+
+#### Light Actions
+Control Govee light colors and effects:
+```yaml
+- type: light
+  action: set_color  # Options: set_color, flash
+  colour:
+    r: 255           # Red (0-255)
+    g: 0             # Green (0-255)
+    b: 0             # Blue (0-255)
+
+- type: light
+  action: flash
+  amount: 15         # Number of flashes
+```
+
+#### Music Actions
+Play audio files:
+```yaml
+- type: music
+  file: vomit_4_sec.mp3  # File name from music_files/ directory
+  action: play
+```
+
+#### Sleep/Delay
+Add delays between actions:
+```yaml
+- type: sleep
+  duration: 0.5      # Duration in seconds
+```
+
+### Setup Sequence
+
+The `setup_sequence` runs once at startup to initialize and test hardware. Configure it in `configs.yaml`:
+
+```yaml
+setup_sequence:
+  - type: light
+    action: set_color
+    colour:
+      r: 100
+      g: 100
+      b: 0
+  - type: motor
+    action: forward
+    duration: 4
+  - type: motor
+    action: reverse
+    duration: 2.5
+  # ... more setup actions
+```
+
+### Trigger Sequence
+
+The `sequence` executes when an object is detected within the trigger distance. Configure it in `configs.yaml`:
+
+```yaml
+sequence:
+  - type: motor
+    action: forward
+    duration: 4
+  - type: relay
+    name: smoke
+    action: on
+  - type: sleep
+    duration: 0.5
+  # ... more trigger actions
+```
+
+### Complete Sequence Example
+
+Here's an example trigger sequence:
+```yaml
+sequence:
+  - type: motor
+    action: forward
+    duration: 4
+  - type: relay
+    name: smoke
+    action: on
+  - type: sleep
+    duration: 0.5
+  - type: relay
+    name: smoke
+    action: off
+  - type: relay
+    name: pump
+    action: on
+  - type: music
+    file: vomit_4_sec.mp3
+    action: play
+  - type: light
+    action: set_color
+    colour:
+      r: 0
+      g: 255
+      b: 0
+  - type: light
+    action: flash
+    amount: 15
+  # ... continue with more actions
 ```
 
 ## 🚀 Usage
@@ -122,9 +234,9 @@ python main.py
 
 The system will:
 1. Load configuration from `configs.yaml`
-2. Initialize and test all hardware components
+2. Execute the `setup_sequence` to initialize hardware
 3. Start monitoring for approaching objects
-4. Execute Halloween sequence when triggered
+4. Execute `sequence` when triggered by detection
 5. Log all operations to console and `halloween_barrel.log`
 
 ### Graceful Shutdown
@@ -132,40 +244,35 @@ The system will:
 - All components will be properly shut down
 - Logs will be saved
 
-## ⚙️ Configuration Reference
+## 📋 Configuration Reference
 
 ### Distance Thresholds
-- `warning`: Distance (cm) for approach warning
+- `warning`: Distance (cm) for approach warning (object detected but not triggering)
 - `trigger`: Distance (cm) to execute Halloween sequence
-- `minimum_valid`: Minimum reliable sensor reading
-- `maximum_valid`: Maximum reliable sensor reading
-
-### Timing Settings
-- `motor_forward_duration`: How long skeleton leans forward over barrel (seconds)
-- `motor_reverse_duration`: How long skeleton returns to resting position (seconds)
-- `smoke_delay`: Delay before smoke activation (seconds)
-- `smoke_duration`: How long smoke runs (seconds)
-- `pump_duration`: How long water pump runs (seconds)
-- `cooldown_duration`: Minimum time between sequences (seconds)
-- `reading_interval`: Time between distance readings (seconds)
-
-### Validation Settings
-- `consecutive_readings`: Number of readings for consistency check
-- `reading_tolerance`: Tolerance for reading consistency (cm)
-- `max_failed_readings`: Max failures before system error
 
 ### Hardware Configuration
-All GPIO pins can be reconfigured in the `hardware` section. Use BCM pin numbering.
+All GPIO pins can be reconfigured in the `hardware` section. Use BCM pin numbering:
+- `motor_pins`: Forward and reverse pin numbers
+- `pump_relay_pin`: GPIO pin for pump relay
+- `smoke_relay_pin`: GPIO pin for smoke relay
+- `ultrasonic_pins`: Trigger and echo pin numbers
+- `govee_light.ip_address`: IP address of Govee WiFi light
+
+### Sequence Actions Reference
+
+| Action Type | Parameters | Description |
+|-------------|------------|-------------|
+| `motor` | `action: forward/reverse/stop`, `duration` (seconds) | Control skeleton movement |
+| `relay` | `name: pump/smoke`, `action: on/off` | Control pump or smoke machine |
+| `light` | `action: set_color`, `colour: {r, g, b}` | Set light color (0-255 RGB) |
+| `light` | `action: flash`, `amount` (number) | Flash light specified number of times |
+| `music` | `file` (filename), `action: play` | Play audio file from music_files/ |
+| `sleep` | `duration` (seconds) | Delay between actions |
 
 ### Logging Configuration
 - `level`: Logging level (DEBUG, INFO, WARNING, ERROR)
 - `file`: Log file path
 - `console`: Enable console output
-
-### Safety Settings
-- `emergency_stop_enabled`: Enable emergency stop functionality
-- `max_sequence_duration`: Maximum time for a sequence (seconds)
-- `auto_cleanup_on_error`: Auto cleanup on errors
 
 ## 🔧 Troubleshooting
 
@@ -178,6 +285,19 @@ All GPIO pins can be reconfigured in the `hardware` section. Use BCM pin numberi
 #### "Invalid YAML in config file"
 - Validate YAML syntax using an online YAML validator
 - Check for proper indentation (use spaces, not tabs)
+- Ensure all sequence items have required `type` field
+
+#### "Unknown action type"
+- Check that action type is one of: `motor`, `relay`, `light`, `music`, `sleep`
+- Verify action parameters match the expected format
+
+#### "Unknown relay name"
+- Relay name must be either `pump` or `smoke`
+- Check spelling and case sensitivity
+
+#### "Unknown music file"
+- Ensure MP3 file exists in `music_files/` directory
+- Verify filename matches exactly (including extension)
 
 #### "Hardware initialization failed"
 - Verify all GPIO connections
@@ -215,17 +335,21 @@ Check `halloween_barrel.log` for detailed operation logs and error messages.
 - **Electrical Safety**: Ensure all connections are secure and properly insulated
 - **Water Safety**: Use appropriate water pump and ensure electrical connections are protected from moisture
 - **Mechanical Safety**: Ensure skeleton movement area is clear and secure
-- **Emergency Stop**: System includes automatic emergency stop functionality
-- **Cooldown Periods**: Built-in delays prevent rapid-fire triggering
+- **Testing**: Always test sequences in a safe environment before Halloween night
+- **Power Management**: Ensure adequate power supplies for all components
 
 ## 📁 Project Structure
 
 ```
 halloween_barrel/
 ├── main.py                 # Main application
-├── configs.yaml           # Configuration file
+├── configs.yaml           # Configuration file (sequences, hardware, etc.)
 ├── README.md              # This file
 ├── halloween_barrel.log   # Log file (created at runtime)
+├── music_files/           # Audio files directory
+│   ├── vomit_1_sec.mp3
+│   ├── vomit_2_sec.mp3
+│   └── vomit_4_sec.mp3
 └── plugins/               # Hardware plugin modules
     ├── motor.py           # Motor control
     ├── ultrasonic.py      # Ultrasonic sensor control
@@ -233,6 +357,37 @@ halloween_barrel/
     ├── govee_plugin.py    # Govee light control
     └── music_player.py    # Audio playback
 ```
+
+## 🎨 Customizing Your Sequence
+
+### Tips for Creating Effective Sequences
+
+1. **Start with Movement**: Begin with skeleton movement to catch attention
+2. **Layer Effects**: Combine multiple effects (smoke + music + lights) for maximum impact
+3. **Timing is Key**: Use `sleep` actions to coordinate timing between effects
+4. **Build Suspense**: Gradually increase intensity (smoke → lights → music → pump)
+5. **Reset State**: End sequences by returning to initial state (motor reverse, lights reset)
+
+### Example: Creating a New Sequence
+
+1. Open `configs.yaml`
+2. Locate the `sequence:` section
+3. Add actions in the order you want them executed:
+```yaml
+sequence:
+  - type: motor
+    action: forward
+    duration: 3
+  - type: light
+    action: set_color
+    colour:
+      r: 255
+      g: 0
+      b: 0
+  # ... add more actions
+```
+
+4. Save and restart the program
 
 ## 🤝 Contributing
 
@@ -252,10 +407,11 @@ For issues and questions:
 1. Check the troubleshooting section above
 2. Review the log files for error messages
 3. Verify your hardware connections and configuration
-4. Create an issue in the repository with detailed information
+4. Validate your YAML syntax
+5. Create an issue in the repository with detailed information
 
 ---
 
 **Happy Halloween! 🎃👻**
 
-*Remember to test your setup in a safe environment before Halloween night!*
+*Remember to test your setup and sequences in a safe environment before Halloween night!*
